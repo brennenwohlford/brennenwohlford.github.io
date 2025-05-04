@@ -22,6 +22,40 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -151,6 +185,880 @@ ul.task-list li input[type="checkbox"] {
 
 
 
+<p>Analytics in football have become more prominent in recent years. The latest trend with analytics has been whether or not to go for it on 4th downs more or less. Back in the day with Manning, Brady, etc. teams got to fourth down and it meant the drive was over and they punted the ball away.</p>
+<p>The differences between even 2019 and 2024 are stark with every team having a significant uptick in going for it on 4th down. The most fascinating trend is in the top 4 teams who went for it and converted at a significant clip. Washington, Buffalo, Philadelphia, and Detroit all went for it more than every other team and three out of the four ended up in the championship round.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gt)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggrepel)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>pbp <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"pbp.csv"</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>goodpbp <span class="ot">&lt;-</span> pbp <span class="sc">|&gt;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(down <span class="sc">==</span> <span class="st">"4"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(play_type <span class="sc">==</span> <span class="st">"pass"</span> <span class="sc">|</span> play_type <span class="sc">==</span> <span class="st">"run"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(posteam, season) <span class="sc">|&gt;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">fourth_down_plays =</span> <span class="fu">n</span>(),</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">avg_yards_gained =</span> <span class="fu">mean</span>(yards_gained),</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">avg_yards_togo =</span> <span class="fu">mean</span>(ydstogo),</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">largest_gain =</span> <span class="fu">max</span>(yards_gained),</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">smallest_gain =</span> <span class="fu">min</span>(yards_gained),</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">total_epa_added =</span> <span class="fu">sum</span>(epa),</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">total_fourth_downs_converted =</span> <span class="fu">sum</span>(fourth_down_converted)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">fourth_down_conversion_percent =</span> total_fourth_downs_converted<span class="sc">/</span>fourth_down_plays,</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>     <span class="at">team_season =</span> <span class="fu">paste</span>(posteam, season)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(total_epa_added))</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>pbptable2024 <span class="ot">&lt;-</span> goodpbp <span class="sc">|&gt;</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(season <span class="sc">==</span> <span class="st">"2024"</span>)</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>pbptable2023 <span class="ot">&lt;-</span> goodpbp <span class="sc">|&gt;</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(season <span class="sc">==</span> <span class="st">"2023"</span>)</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>pbptable2022 <span class="ot">&lt;-</span> goodpbp <span class="sc">|&gt;</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(season <span class="sc">==</span> <span class="st">"2022"</span>)</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>pbptable2021 <span class="ot">&lt;-</span> goodpbp <span class="sc">|&gt;</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(season <span class="sc">==</span> <span class="st">"2021"</span>)</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>pbptable2020 <span class="ot">&lt;-</span> goodpbp <span class="sc">|&gt;</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(season <span class="sc">==</span> <span class="st">"2020"</span>)</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>pbptable2019 <span class="ot">&lt;-</span> goodpbp <span class="sc">|&gt;</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(season <span class="sc">==</span> <span class="st">"2019"</span>)</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>pbptable2024join <span class="ot">&lt;-</span> pbptable2024 <span class="sc">|&gt;</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(posteam, fourth_down_plays, total_fourth_downs_converted, fourth_down_conversion_percent) <span class="sc">|&gt;</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>    <span class="at">fourth_down_plays2024 =</span> fourth_down_plays,</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>    <span class="at">total_fourth_downs_converted2024 =</span> total_fourth_downs_converted,</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>    <span class="at">fourth_down_conversion_percent2024 =</span> fourth_down_conversion_percent</span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>pbptable2019join <span class="ot">&lt;-</span> pbptable2019 <span class="sc">|&gt;</span></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(posteam, fourth_down_plays, total_fourth_downs_converted, fourth_down_conversion_percent) <span class="sc">|&gt;</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>    <span class="at">fourth_down_plays2019 =</span> fourth_down_plays,</span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>    <span class="at">total_fourth_downs_converted2019 =</span> total_fourth_downs_converted,</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>    <span class="at">fourth_down_conversion_percent2019 =</span> fourth_down_conversion_percent</span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>pbptable <span class="ot">&lt;-</span> pbptable2024join <span class="sc">|&gt;</span> <span class="fu">inner_join</span>(pbptable2019join)</span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>pbptable <span class="sc">|&gt;</span></span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">|&gt;</span></span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(posteam, fourth_down_conversion_percent2019, fourth_down_conversion_percent2024) <span class="sc">|&gt;</span></span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a>  <span class="fu">gt</span>() <span class="sc">|&gt;</span></span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cols_label</span>(</span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>    <span class="at">posteam =</span> <span class="st">""</span>,</span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a>    <span class="at">fourth_down_conversion_percent2019 =</span> <span class="st">"2019 4th Down Conversion Percentage"</span>,</span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a>    <span class="at">fourth_down_conversion_percent2024 =</span> <span class="st">"2024 4th Down Conversion Percentage"</span></span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tab_header</span>(</span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Who had the greatest increase in 4th down conversion percentage the last 5 years?"</span>,</span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle =</span> <span class="st">"3 out of the 4 Championship teams had the greatest increase with Washington leading the way"</span></span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> <span class="fu">tab_style</span>(</span>
+<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a>    <span class="at">style =</span> <span class="fu">cell_text</span>(<span class="at">color =</span> <span class="st">"black"</span>, <span class="at">weight =</span> <span class="st">"bold"</span>, <span class="at">align =</span> <span class="st">"left"</span>),</span>
+<span id="cb1-72"><a href="#cb1-72" aria-hidden="true" tabindex="-1"></a>    <span class="at">locations =</span> <span class="fu">cells_title</span>(<span class="st">"title"</span>)</span>
+<span id="cb1-73"><a href="#cb1-73" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> <span class="fu">tab_style</span>(</span>
+<span id="cb1-74"><a href="#cb1-74" aria-hidden="true" tabindex="-1"></a>    <span class="at">style =</span> <span class="fu">cell_text</span>(<span class="at">color =</span> <span class="st">"black"</span>, <span class="at">align =</span> <span class="st">"left"</span>),</span>
+<span id="cb1-75"><a href="#cb1-75" aria-hidden="true" tabindex="-1"></a>    <span class="at">locations =</span> <span class="fu">cells_title</span>(<span class="st">"subtitle"</span>)</span>
+<span id="cb1-76"><a href="#cb1-76" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb1-77"><a href="#cb1-77" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tab_source_note</span>(</span>
+<span id="cb1-78"><a href="#cb1-78" aria-hidden="true" tabindex="-1"></a>    <span class="at">source_note =</span> <span class="fu">md</span>(<span class="st">"**By:** Brennen Wohlford  |  **Source:** nflfastr: The SportsDataverse’s R Package for NFL Data"</span>)</span>
+<span id="cb1-79"><a href="#cb1-79" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb1-80"><a href="#cb1-80" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tab_style</span>(</span>
+<span id="cb1-81"><a href="#cb1-81" aria-hidden="true" tabindex="-1"></a>     <span class="at">locations =</span> <span class="fu">cells_column_labels</span>(<span class="at">columns =</span> <span class="fu">everything</span>()),</span>
+<span id="cb1-82"><a href="#cb1-82" aria-hidden="true" tabindex="-1"></a>     <span class="at">style =</span> <span class="fu">list</span>(</span>
+<span id="cb1-83"><a href="#cb1-83" aria-hidden="true" tabindex="-1"></a>       <span class="fu">cell_borders</span>(<span class="at">sides =</span> <span class="st">"bottom"</span>, <span class="at">weight =</span> <span class="fu">px</span>(<span class="dv">3</span>)),</span>
+<span id="cb1-84"><a href="#cb1-84" aria-hidden="true" tabindex="-1"></a>       <span class="fu">cell_text</span>(<span class="at">weight =</span> <span class="st">"bold"</span>, <span class="at">size=</span><span class="dv">12</span>)</span>
+<span id="cb1-85"><a href="#cb1-85" aria-hidden="true" tabindex="-1"></a>     )</span>
+<span id="cb1-86"><a href="#cb1-86" aria-hidden="true" tabindex="-1"></a>   ) <span class="sc">|&gt;</span></span>
+<span id="cb1-87"><a href="#cb1-87" aria-hidden="true" tabindex="-1"></a>  <span class="fu">opt_row_striping</span>() <span class="sc">|&gt;</span></span>
+<span id="cb1-88"><a href="#cb1-88" aria-hidden="true" tabindex="-1"></a>  <span class="fu">opt_table_lines</span>(<span class="st">"none"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb1-89"><a href="#cb1-89" aria-hidden="true" tabindex="-1"></a>    <span class="fu">fmt_percent</span>(</span>
+<span id="cb1-90"><a href="#cb1-90" aria-hidden="true" tabindex="-1"></a>    <span class="at">columns =</span> <span class="fu">c</span>(fourth_down_conversion_percent2019, fourth_down_conversion_percent2024),</span>
+<span id="cb1-91"><a href="#cb1-91" aria-hidden="true" tabindex="-1"></a>    <span class="at">decimals =</span> <span class="dv">1</span></span>
+<span id="cb1-92"><a href="#cb1-92" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb1-93"><a href="#cb1-93" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data_color</span>(</span>
+<span id="cb1-94"><a href="#cb1-94" aria-hidden="true" tabindex="-1"></a>    <span class="at">columns =</span> <span class="fu">vars</span>(fourth_down_conversion_percent2019),</span>
+<span id="cb1-95"><a href="#cb1-95" aria-hidden="true" tabindex="-1"></a>    <span class="at">colors =</span> scales<span class="sc">::</span><span class="fu">col_numeric</span>(</span>
+<span id="cb1-96"><a href="#cb1-96" aria-hidden="true" tabindex="-1"></a>      <span class="at">palette =</span> <span class="fu">c</span>(</span>
+<span id="cb1-97"><a href="#cb1-97" aria-hidden="true" tabindex="-1"></a>        <span class="st">"white"</span>, <span class="st">"orange"</span>, <span class="st">"red"</span>),</span>
+<span id="cb1-98"><a href="#cb1-98" aria-hidden="true" tabindex="-1"></a>      <span class="at">domain =</span> <span class="cn">NULL</span>)</span>
+<span id="cb1-99"><a href="#cb1-99" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb1-100"><a href="#cb1-100" aria-hidden="true" tabindex="-1"></a>   <span class="fu">data_color</span>(</span>
+<span id="cb1-101"><a href="#cb1-101" aria-hidden="true" tabindex="-1"></a>    <span class="at">columns =</span> <span class="fu">vars</span>(fourth_down_conversion_percent2024),</span>
+<span id="cb1-102"><a href="#cb1-102" aria-hidden="true" tabindex="-1"></a>    <span class="at">colors =</span> scales<span class="sc">::</span><span class="fu">col_numeric</span>(</span>
+<span id="cb1-103"><a href="#cb1-103" aria-hidden="true" tabindex="-1"></a>      <span class="at">palette =</span> <span class="fu">c</span>(</span>
+<span id="cb1-104"><a href="#cb1-104" aria-hidden="true" tabindex="-1"></a>        <span class="st">"white"</span>, <span class="st">"orange"</span>, <span class="st">"red"</span>),</span>
+<span id="cb1-105"><a href="#cb1-105" aria-hidden="true" tabindex="-1"></a>      <span class="at">domain =</span> <span class="cn">NULL</span>)</span>
+<span id="cb1-106"><a href="#cb1-106" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="rvvwgiqzjk" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#rvvwgiqzjk table {
+  font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#rvvwgiqzjk thead, #rvvwgiqzjk tbody, #rvvwgiqzjk tfoot, #rvvwgiqzjk tr, #rvvwgiqzjk td, #rvvwgiqzjk th {
+  border-style: none;
+}
+
+#rvvwgiqzjk p {
+  margin: 0;
+  padding: 0;
+}
+
+#rvvwgiqzjk .gt_table {
+  display: table;
+  border-collapse: collapse;
+  line-height: normal;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  font-weight: normal;
+  font-style: normal;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: none;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#rvvwgiqzjk .gt_caption {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+#rvvwgiqzjk .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#rvvwgiqzjk .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 3px;
+  padding-bottom: 5px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#rvvwgiqzjk .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#rvvwgiqzjk .gt_bottom_border {
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#rvvwgiqzjk .gt_col_headings {
+  border-top-style: none;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#rvvwgiqzjk .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#rvvwgiqzjk .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#rvvwgiqzjk .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#rvvwgiqzjk .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#rvvwgiqzjk .gt_column_spanner {
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#rvvwgiqzjk .gt_spanner_row {
+  border-bottom-style: hidden;
+}
+
+#rvvwgiqzjk .gt_group_heading {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: none;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  text-align: left;
+}
+
+#rvvwgiqzjk .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: none;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#rvvwgiqzjk .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#rvvwgiqzjk .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#rvvwgiqzjk .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: none;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#rvvwgiqzjk .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#rvvwgiqzjk .gt_stub_row_group {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+  vertical-align: top;
+}
+
+#rvvwgiqzjk .gt_row_group_first td {
+  border-top-width: 2px;
+}
+
+#rvvwgiqzjk .gt_row_group_first th {
+  border-top-width: 2px;
+}
+
+#rvvwgiqzjk .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#rvvwgiqzjk .gt_first_summary_row {
+  border-top-style: none;
+  border-top-color: #D3D3D3;
+}
+
+#rvvwgiqzjk .gt_first_summary_row.thick {
+  border-top-width: 2px;
+}
+
+#rvvwgiqzjk .gt_last_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#rvvwgiqzjk .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#rvvwgiqzjk .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: none;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#rvvwgiqzjk .gt_last_grand_summary_row_top {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: none;
+  border-bottom-width: 6px;
+  border-bottom-color: #D3D3D3;
+}
+
+#rvvwgiqzjk .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#rvvwgiqzjk .gt_table_body {
+  border-top-style: none;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#rvvwgiqzjk .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#rvvwgiqzjk .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#rvvwgiqzjk .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#rvvwgiqzjk .gt_sourcenote {
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#rvvwgiqzjk .gt_left {
+  text-align: left;
+}
+
+#rvvwgiqzjk .gt_center {
+  text-align: center;
+}
+
+#rvvwgiqzjk .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#rvvwgiqzjk .gt_font_normal {
+  font-weight: normal;
+}
+
+#rvvwgiqzjk .gt_font_bold {
+  font-weight: bold;
+}
+
+#rvvwgiqzjk .gt_font_italic {
+  font-style: italic;
+}
+
+#rvvwgiqzjk .gt_super {
+  font-size: 65%;
+}
+
+#rvvwgiqzjk .gt_footnote_marks {
+  font-size: 75%;
+  vertical-align: 0.4em;
+  position: initial;
+}
+
+#rvvwgiqzjk .gt_asterisk {
+  font-size: 100%;
+  vertical-align: 0;
+}
+
+#rvvwgiqzjk .gt_indent_1 {
+  text-indent: 5px;
+}
+
+#rvvwgiqzjk .gt_indent_2 {
+  text-indent: 10px;
+}
+
+#rvvwgiqzjk .gt_indent_3 {
+  text-indent: 15px;
+}
+
+#rvvwgiqzjk .gt_indent_4 {
+  text-indent: 20px;
+}
+
+#rvvwgiqzjk .gt_indent_5 {
+  text-indent: 25px;
+}
+
+#rvvwgiqzjk .katex-display {
+  display: inline-flex !important;
+  margin-bottom: 0.75em !important;
+}
+
+#rvvwgiqzjk div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+  height: 0px !important;
+}
+</style>
+
+<table class="gt_table caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<thead>
+<tr class="gt_heading header">
+<th colspan="3" class="gt_heading gt_title gt_font_normal" style="text-align: left; color: #000000; font-weight: bold;">Who had the greatest increase in 4th down conversion percentage the last 5 years?</th>
+</tr>
+<tr class="gt_heading even">
+<th colspan="3" class="gt_heading gt_subtitle gt_font_normal gt_bottom_border" style="text-align: left; color: #000000;">3 out of the 4 Championship teams had the greatest increase with Washington leading the way</th>
+</tr>
+<tr class="gt_col_headings header">
+<th id="posteam" class="gt_col_heading gt_columns_bottom_border gt_left" data-quarto-table-cell-role="th" style="border-bottom-width: 3px; border-bottom-style: solid; border-bottom-color: #000000; font-size: 12; font-weight: bold" scope="col"></th>
+<th id="fourth_down_conversion_percent2019" class="gt_col_heading gt_columns_bottom_border gt_right" data-quarto-table-cell-role="th" style="border-bottom-width: 3px; border-bottom-style: solid; border-bottom-color: #000000; font-size: 12; font-weight: bold" scope="col">2019 4th Down Conversion Percentage</th>
+<th id="fourth_down_conversion_percent2024" class="gt_col_heading gt_columns_bottom_border gt_right" data-quarto-table-cell-role="th" style="border-bottom-width: 3px; border-bottom-style: solid; border-bottom-color: #000000; font-size: 12; font-weight: bold" scope="col">2024 4th Down Conversion Percentage</th>
+</tr>
+</thead>
+<tbody class="gt_table_body">
+<tr class="odd">
+<td class="gt_row gt_left" headers="posteam">WAS</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2019" style="background-color: #FF9E00; color: #000000">42.9%</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2024" style="background-color: #FF0000; color: #FFFFFF">78.9%</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="posteam">BUF</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2019" style="background-color: #FFA100; color: #000000">42.1%</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2024" style="background-color: #FF4600; color: #FFFFFF">74.2%</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="posteam">ATL</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2019" style="background-color: #FF4B00; color: #FFFFFF">61.9%</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2024" style="background-color: #FF7100; color: #FFFFFF">67.7%</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="posteam">DET</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2019" style="background-color: #FFAD2F; color: #000000">38.5%</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2024" style="background-color: #FF6C00; color: #FFFFFF">68.6%</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="posteam">DEN</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2019" style="background-color: #FF0000; color: #FFFFFF">68.8%</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2024" style="background-color: #FF7700; color: #FFFFFF">66.7%</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="posteam">PHI</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2019" style="background-color: #FFC26A; color: #000000">32.0%</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2024" style="background-color: #FF5D00; color: #FFFFFF">71.0%</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="posteam">CHI</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2019" style="background-color: #FFBD5F; color: #000000">33.3%</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2024" style="background-color: #FF9600; color: #000000">60.5%</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="posteam">LA</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2019" style="background-color: #FFDFB1; color: #000000">23.1%</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2024" style="background-color: #FF7D00; color: #FFFFFF">65.4%</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="posteam">KC</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2019" style="background-color: #FF3B00; color: #FFFFFF">64.3%</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2024" style="background-color: #FF7700; color: #FFFFFF">66.7%</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="posteam">HOU</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2019" style="background-color: #FF9600; color: #000000">45.2%</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2024" style="background-color: #FF8F00; color: #000000">61.9%</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="posteam">IND</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2019" style="background-color: #FF5E00; color: #FFFFFF">58.3%</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2024" style="background-color: #FF9500; color: #000000">60.7%</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="posteam">NO</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2019" style="background-color: #FFAD2F; color: #000000">38.5%</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2024" style="background-color: #FFAC2B; color: #000000">55.6%</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="posteam">LAC</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2019" style="background-color: #FF6B00; color: #FFFFFF">55.6%</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2024" style="background-color: #FF9E00; color: #000000">58.8%</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="posteam">NE</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2019" style="background-color: #FFB039; color: #000000">37.5%</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2024" style="background-color: #FFA000; color: #000000">58.3%</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="posteam">CIN</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2019" style="background-color: #FF8300; color: #000000">50.0%</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2024" style="background-color: #FFB851; color: #000000">52.6%</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="posteam">JAX</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2019" style="background-color: #FF8300; color: #000000">50.0%</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2024" style="background-color: #FFB342; color: #000000">53.8%</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="posteam">LV</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2019" style="background-color: #FF6000; color: #FFFFFF">57.9%</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2024" style="background-color: #FFAA24; color: #000000">56.0%</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="posteam">TB</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2019" style="background-color: #FF7700; color: #FFFFFF">52.9%</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2024" style="background-color: #FF8300; color: #000000">64.3%</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="posteam">CLE</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2019" style="background-color: #FFA500; color: #000000">41.2%</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2024" style="background-color: #FFB03A; color: #000000">54.5%</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="posteam">BAL</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2019" style="background-color: #FF5200; color: #FFFFFF">60.7%</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2024" style="background-color: #FFA920; color: #000000">56.2%</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="posteam">SF</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2019" style="background-color: #FF8300; color: #000000">50.0%</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2024" style="background-color: #FFC36D; color: #000000">50.0%</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="posteam">GB</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2019" style="background-color: #FF6800; color: #FFFFFF">56.2%</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2024" style="background-color: #FFC36D; color: #000000">50.0%</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="posteam">SEA</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2019" style="background-color: #FF7500; color: #FFFFFF">53.3%</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2024" style="background-color: #FFB851; color: #000000">52.6%</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="posteam">MIA</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2019" style="background-color: #FF9100; color: #000000">46.4%</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2024" style="background-color: #FFC97E; color: #000000">48.4%</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="posteam">CAR</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2019" style="background-color: #FF8300; color: #000000">50.0%</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2024" style="background-color: #FFD18F; color: #000000">46.7%</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="posteam">NYG</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2019" style="background-color: #FF9600; color: #000000">45.2%</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2024" style="background-color: #FFB240; color: #000000">54.1%</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="posteam">ARI</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2019" style="background-color: #FF3600; color: #FFFFFF">65.0%</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2024" style="background-color: #FFDAA6; color: #000000">44.4%</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="posteam">TEN</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2019" style="background-color: #FFB74E; color: #000000">35.3%</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2024" style="background-color: #FFF0DC; color: #000000">39.1%</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="posteam">NYJ</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2019" style="background-color: #FFB240; color: #000000">36.8%</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2024" style="background-color: #FFE6C2; color: #000000">41.7%</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="posteam">MIN</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2019" style="background-color: #FF8F00; color: #000000">47.1%</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2024" style="background-color: #FFE8C7; color: #000000">41.2%</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="posteam">PIT</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2019" style="background-color: #FFFFFF; color: #000000">13.3%</td>
+<td class="gt_row gt_right" headers="fourth_down_conversion_percent2024" style="background-color: #FFFAF3; color: #000000">36.8%</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="posteam">DAL</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2019" style="background-color: #FF9B00; color: #000000">43.8%</td>
+<td class="gt_row gt_right gt_striped" headers="fourth_down_conversion_percent2024" style="background-color: #FFFFFF; color: #000000">35.7%</td>
+</tr>
+</tbody><tfoot class="gt_sourcenotes">
+<tr class="odd">
+<td colspan="3" class="gt_sourcenote"><strong>By:</strong> Brennen Wohlford | <strong>Source:</strong> nflfastr: The SportsDataverse’s R Package for NFL Data</td>
+</tr>
+</tfoot>
+
+</table>
+
+</div>
+</div>
+</div>
+<p>When deciding on when to run or pass on 4th downs it varies by teams. It usually leans heavier towards a pass first situation.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>play_type_2024 <span class="ot">&lt;-</span> pbp <span class="sc">|&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(season <span class="sc">==</span> <span class="st">"2024"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(down <span class="sc">==</span> <span class="st">"4"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(play_type <span class="sc">==</span> <span class="st">"run"</span> <span class="sc">|</span> play_type <span class="sc">==</span> <span class="st">"pass"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(posteam, play_type) <span class="sc">|&gt;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">total =</span> <span class="fu">n</span>()</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>() <span class="sc">+</span> </span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">data=</span>play_type_2024, <span class="fu">aes</span>(<span class="at">x=</span> <span class="fu">reorder</span>(posteam, total), <span class="at">weight=</span>total, <span class="at">fill=</span>play_type)) <span class="sc">+</span> </span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_flip</span>() <span class="sc">+</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values=</span><span class="fu">c</span>(<span class="st">"red"</span>, <span class="st">"blue"</span>)) <span class="sc">+</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">x=</span><span class="st">""</span>,</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">y=</span><span class="st">"Total 4th down plays"</span>,</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">title=</span><span class="st">"Do teams utilize the pass or run in 4th down situations?"</span>,</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle=</span><span class="st">"A majority of teams overwhelmingly pass over running save a few with elite rushing attacks"</span>,</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption=</span><span class="st">"Source: nflfastr | By: Brennen Wohlford"</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">15</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">axis.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>),</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.subtitle =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">10</span>),</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid.minor =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.title.position =</span> <span class="st">"plot"</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Now we’ve figured out the conversion percentage and what plays teams use more often in these situations, but what’s the point of going for it on 4th down if the teams don’t score points.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>pbp2024 <span class="ot">&lt;-</span> goodpbp <span class="sc">|&gt;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(season <span class="sc">==</span> <span class="st">"2024"</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>pbp2023 <span class="ot">&lt;-</span> goodpbp <span class="sc">|&gt;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(season <span class="sc">==</span> <span class="st">"2023"</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>pbp2022 <span class="ot">&lt;-</span> goodpbp <span class="sc">|&gt;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(season <span class="sc">==</span> <span class="st">"2022"</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>pbp2021 <span class="ot">&lt;-</span> goodpbp <span class="sc">|&gt;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(season <span class="sc">==</span> <span class="st">"2021"</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>pbp2020 <span class="ot">&lt;-</span> goodpbp <span class="sc">|&gt;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(season <span class="sc">==</span> <span class="st">"2020"</span>)</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>pbp2019 <span class="ot">&lt;-</span> goodpbp <span class="sc">|&gt;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(season <span class="sc">==</span> <span class="st">"2019"</span>)</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>comms2024 <span class="ot">&lt;-</span> pbp2024 <span class="sc">|&gt;</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(posteam <span class="sc">==</span> <span class="st">"WAS"</span>)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>browns2024 <span class="ot">&lt;-</span> pbp2024 <span class="sc">|&gt;</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(posteam <span class="sc">==</span> <span class="st">"CLE"</span>)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>cardinals2022 <span class="ot">&lt;-</span> pbp2022 <span class="sc">|&gt;</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(posteam <span class="sc">==</span> <span class="st">"ARI"</span>)</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>() <span class="sc">+</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">data=</span>goodpbp,</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x=</span>total_epa_added, <span class="at">y=</span>fourth_down_plays, <span class="at">size=</span>total_fourth_downs_converted),</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>     <span class="at">color=</span><span class="st">"grey"</span>,</span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">alpha=</span>.<span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(</span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>    <span class="at">data=</span>comms2024,</span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x=</span>total_epa_added, <span class="at">y=</span>fourth_down_plays, <span class="at">size=</span>total_fourth_downs_converted),</span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>    <span class="at">color=</span><span class="st">"red"</span>) <span class="sc">+</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(</span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">data=</span>cardinals2022,</span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x=</span>total_epa_added, <span class="at">y=</span>fourth_down_plays, <span class="at">size=</span>total_fourth_downs_converted),</span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>    <span class="at">color=</span><span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>   <span class="fu">geom_point</span>(</span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>    <span class="at">data=</span>browns2024,</span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x=</span>total_epa_added, <span class="at">y=</span>fourth_down_plays, <span class="at">size=</span>total_fourth_downs_converted),</span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>    <span class="at">color=</span><span class="st">"orange"</span>) <span class="sc">+</span></span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">1.241124</span> ) <span class="sc">+</span></span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">23.71354</span> ) <span class="sc">+</span></span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text_repel</span>(</span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a>    <span class="at">data=</span>comms2024,</span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x=</span>total_epa_added, <span class="at">y=</span>fourth_down_plays, <span class="at">label=</span>team_season)) <span class="sc">+</span></span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text_repel</span>(</span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>    <span class="at">data=</span>browns2024,</span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x=</span>total_epa_added, <span class="at">y=</span>fourth_down_plays, <span class="at">label=</span>team_season))<span class="sc">+</span></span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text_repel</span>(</span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>    <span class="at">data=</span>cardinals2022,</span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x=</span>total_epa_added, <span class="at">y=</span>fourth_down_plays, <span class="at">label=</span>team_season)) <span class="sc">+</span></span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a>    <span class="at">x=</span><span class="st">"Total Expected Points Added"</span>,</span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a>    <span class="at">y=</span><span class="st">"Total 4th Downs"</span>,</span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a>    <span class="at">title=</span><span class="st">"Who created the most points through 4th down conversions?"</span>,</span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle=</span><span class="st">"The Commanders lead the league with 63 EPA on 38 fourth downs while Cleveland had 6 more plays with a little under 1 EPA"</span>,</span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption=</span><span class="st">"Source: nflfastr | By: Brennen Wohlford"</span></span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">15</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a>    <span class="at">axis.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>),</span>
+<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.subtitle =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">10</span>),</span>
+<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid.minor =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.title.position =</span> <span class="st">"plot"</span></span>
+<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
 
 
 
